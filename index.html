@@ -122,14 +122,15 @@
     }
     .lightbox-panel {
       position: relative;
-      z-index: 1;
       display: flex;
+      flex-direction: column;
       width: 90vw;
-      max-width: 1100px;
-      height: 80vh;
+      height: 90vh;
+      max-width: 1000px;
+      max-height: 800px;
       background: #111;
       border: 1px solid var(--border);
-      border-radius: 4px;
+      border-radius: 8px;
       overflow: hidden;
       transform: scale(0.95);
       transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
@@ -137,55 +138,58 @@
     .lightbox.active .lightbox-panel { transform: scale(1); }
 
     .lightbox-media {
-      flex: 1;
+      flex: 1; /* Occupies all available space not taken by info */
       background: #000;
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
     }
     .lightbox-media img {
-      max-width: 100%;
-      max-height: 100%;
+      width: 100%;
+      height: 100%;
       object-fit: contain;
     }
 
     .lightbox-info {
-      width: 320px;
-      padding: 40px 30px;
-      border-left: 1px solid var(--border);
+      flex-shrink: 0;
+      height: 220px; /* Fixed height for info area */
+      padding: 25px 30px;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 12px;
       background: #0a0a0a;
+      overflow-y: auto;
     }
 
     .lb-title {
       font-family: 'Cormorant Garamond', serif;
-      font-size: 26px;
+      font-size: 22px;
       color: var(--gold-light);
       line-height: 1.2;
     }
     .lb-quote {
       font-family: 'Cormorant Garamond', serif;
       font-style: italic;
-      font-size: 16px;
-      color: #ccc;
+      font-size: 15px;
+      color: #aaa;
       border-left: 2px solid var(--gold);
-      padding-left: 15px;
-      line-height: 1.6;
+      padding-left: 12px;
+      line-height: 1.5;
     }
     .lb-concept {
       font-size: 13px;
-      color: #777;
-      line-height: 1.8;
+      color: #666;
+      line-height: 1.6;
     }
     .lb-meta {
-      margin-top: auto;
-      padding-top: 20px;
+      margin-top: 10px;
+      padding-top: 15px;
       border-top: 1px solid var(--border);
       display: flex;
       align-items: center;
-      gap: 15px;
+      gap: 20px;
       font-size: 12px;
       color: #555;
     }
@@ -320,6 +324,40 @@
       transform: translate(-50%, -50%);
       color: var(--muted);
       text-align: center;
+    }
+
+    /* ═══ DESKTOP SMART PORTRAIT LAYOUT ═══ */
+    @media (min-width: 769px) {
+      .lightbox-panel.is-portrait {
+        flex-direction: row;
+      }
+      .lightbox-panel.is-portrait .lightbox-media {
+        border-bottom: none;
+        border-right: 1px solid var(--border);
+      }
+      .lightbox-panel.is-portrait .lightbox-info {
+        height: auto;
+        width: 320px;
+        flex-shrink: 0;
+      }
+    }
+
+    /* ═══ MOBILE OPTIMIZATION ═══ */
+    @media (max-width: 768px) {
+      .lightbox-panel {
+        width: 100vw;
+        height: 100vh;
+        max-width: none;
+        max-height: none;
+        border-radius: 0;
+        border: none;
+      }
+      .lightbox-info {
+        height: 200px; /* Slightly smaller height on mobile */
+        padding: 20px;
+      }
+      .lb-title { font-size: 20px; }
+      .lb-quote { font-size: 14px; }
     }
   </style>
 </head>
@@ -531,7 +569,19 @@
     window.openLightbox = function(data) {
       activeTileData = data;
       const media = document.getElementById('lbMedia');
-      media.innerHTML = `<img src="${data.img}" alt="">`;
+      const lbPanel = document.querySelector('.lightbox-panel');
+      
+      lbPanel.classList.remove('is-portrait');
+
+      media.innerHTML = `<img src="${data.img}" alt="" id="lbImg">`;
+      
+      const imgEl = document.getElementById('lbImg');
+      imgEl.onload = () => {
+        if (imgEl.naturalHeight > imgEl.naturalWidth) {
+          lbPanel.classList.add('is-portrait');
+        }
+      };
+
       document.getElementById('lbTitle').innerText = data.title;
       document.getElementById('lbQuote').innerText = data.quote || '“藝術是心靈的鏡像。”';
       document.getElementById('lbConcept').innerText = data.concept || '這件作品探索了光影與情感的邊界，呈現出一種靜謐的內在對話。';

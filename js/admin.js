@@ -35,6 +35,7 @@ const uploadMsg     = document.getElementById("uploadMsg");
 const manageList    = document.getElementById("manageList");
 
 let selectedFile = null;
+let detectedOrientation = "landscape";
 
 // 圖片前端壓縮：超過 1920px 寬則縮小，輸出 JPEG quality 0.85
 // 影片不壓縮（Canvas 無法處理影片）
@@ -121,15 +122,30 @@ dropZone.addEventListener("drop", e => {
 function handleFile(file) {
   selectedFile = file;
   filePreviewName.textContent = file.name;
+  const typeHint = document.getElementById("typeHint");
 
   if (file.type.startsWith("image/")) {
-    filePreviewImg.src = URL.createObjectURL(file);
+    const objUrl = URL.createObjectURL(file);
+    filePreviewImg.src = objUrl;
     filePreviewImg.classList.remove("hidden");
     filePreviewVideo.classList.add("hidden");
+
+    const tmpImg = new Image();
+    tmpImg.onload = () => {
+      detectedOrientation = tmpImg.naturalWidth >= tmpImg.naturalHeight ? "landscape" : "portrait";
+      if (typeHint) typeHint.textContent = `（自動偵測：${detectedOrientation === "landscape" ? "橫向" : "直向"}）`;
+      URL.revokeObjectURL(objUrl);
+    };
+    tmpImg.src = objUrl;
+
+    document.querySelector('input[name="artType"][value="image"]').checked = true;
   } else if (file.type.startsWith("video/")) {
     filePreviewVideo.src = URL.createObjectURL(file);
     filePreviewVideo.classList.remove("hidden");
     filePreviewImg.classList.add("hidden");
+    detectedOrientation = "landscape";
+    if (typeHint) typeHint.textContent = "（自動偵測：影片）";
+    document.querySelector('input[name="artType"][value="video"]').checked = true;
   }
   filePreviewWrap.classList.remove("hidden");
 }
@@ -151,7 +167,7 @@ uploadForm.addEventListener("submit", async e => {
   const quote       = artQuote.value.trim();
   const concept     = artConcept.value.trim();
   const artType     = document.querySelector('input[name="artType"]:checked').value;
-  const orientation = document.querySelector('input[name="artOrientation"]:checked').value;
+  const orientation = detectedOrientation;
 
   if (!title || !quote) { showMsg("作品名稱與 Ashley 的話不可空白", "error"); return; }
 
@@ -224,22 +240,12 @@ function loadArtworks() {
           <p class="manage-name">${escHtml(d.title || "（無標題）")}</p>
           <p class="manage-stats">♡ ${d.likes || 0} &nbsp;·&nbsp; 👁 ${d.views || 0}</p>
         </div>
-        <button class="btn-boost" data-id="${id}" title="增加 50 讚 + 100 瀏覽（鼓勵 Ashley）">＋鼓勵</button>
         <button class="btn-delete" data-id="${id}" data-url="${escHtml(d.mediaUrl)}">刪除</button>
       `;
 
-      item.querySelector(".btn-boost").addEventListener("click", () => boostArtwork(id));
       item.querySelector(".btn-delete").addEventListener("click", () => deleteArtwork(id, d.mediaUrl));
       manageList.appendChild(item);
     });
-  });
-}
-
-// ===== 鼓勵 Ashley：後台手動增加讚/瀏覽 =====
-async function boostArtwork(id) {
-  await updateDoc(doc(db, "artworks", id), {
-    likes: increment(50),
-    views: increment(100)
   });
 }
 

@@ -66,34 +66,39 @@ body {
   padding: 4px;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: 220px;
   gap: 4px;
+  align-items: start;
 }
 
-/* 橫向圖：佔2欄1行 */
-.gallery-card.landscape {
-  grid-column: span 2;
-  grid-row: span 1;
-}
+.gallery-card.landscape  { grid-column: span 2; aspect-ratio: 16 / 9; }
+.gallery-card.portrait   { grid-column: span 1; aspect-ratio: 3 / 4; }
+.gallery-card.video-card { grid-column: span 2; aspect-ratio: 16 / 9; }
 
-/* 直向圖：佔1欄2行 */
-.gallery-card.portrait {
-  grid-column: span 1;
-  grid-row: span 2;
-}
-
-/* 影片：佔2欄1行 */
-.gallery-card.video-card {
-  grid-column: span 2;
-  grid-row: span 1;
+/* ===== B型：散落飛入動畫 ===== */
+@keyframes scatter-in {
+  from {
+    opacity: 0;
+    transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(0.55);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    filter: blur(0px);
+  }
 }
 
 .gallery-card {
+  --tx: 0px;
+  --ty: 0px;
+  --rot: 0deg;
   position: relative;
   overflow: hidden;
   cursor: pointer;
   background: var(--surface);
   border-radius: var(--radius);
+  opacity: 0;
+  animation: scatter-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .gallery-card img,
@@ -353,17 +358,13 @@ body {
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 900px) {
-  .gallery-grid {
-    grid-template-columns: repeat(2, 1fr);
-    grid-auto-rows: 180px;
-  }
+  .gallery-grid { grid-template-columns: repeat(2, 1fr); }
   .lightbox-info { width: 240px; }
 }
 
 @media (max-width: 600px) {
   .gallery-grid {
     grid-template-columns: repeat(2, 1fr);
-    grid-auto-rows: 140px;
     padding: 2px;
     gap: 2px;
   }

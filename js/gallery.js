@@ -37,19 +37,28 @@ onSnapshot(q, (snapshot) => {
   }
   galleryEmpty.classList.add("hidden");
 
+  let cardIndex = 0;
   snapshot.forEach(docSnap => {
     const data = docSnap.data();
-    const card = buildCard(docSnap.id, data);
+    const card = buildCard(docSnap.id, data, cardIndex++);
     grid.appendChild(card);
   });
 });
 
 // ===== 建立卡片 =====
-function buildCard(id, data) {
+function buildCard(id, data, index = 0) {
   const card = document.createElement("article");
   card.className = `gallery-card ${data.orientation || "landscape"}`;
   if (data.type === "video") card.classList.add("video-card");
   card.dataset.id = id;
+
+  const tx  = Math.round(Math.random() * 700 - 350);
+  const ty  = Math.round(Math.random() * 500 - 250);
+  const rot = (Math.random() * 22 - 11).toFixed(1);
+  card.style.setProperty('--tx', tx + 'px');
+  card.style.setProperty('--ty', ty + 'px');
+  card.style.setProperty('--rot', rot + 'deg');
+  card.style.setProperty('animation-delay', (index * 65) + 'ms');
 
   if (data.type === "video") {
     const vid = document.createElement("video");

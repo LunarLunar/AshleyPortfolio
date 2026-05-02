@@ -3,63 +3,647 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ASHLEY — 創作集</title>
+  <title>ASHLEY — Dynamic Portfolio Portfolio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+  <style>
+    :root {
+      --gold: #c9a96e;
+      --gold-light: #e8d5b0;
+      --bg: #000;
+      --border: rgba(255, 255, 255, 0.1);
+      --muted: #555;
+    }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg);
+      font-family: 'Inter', sans-serif;
+      color: #fff;
+    }
+
+    #container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background: #050505;
+    }
+
+    /* ═══ TILE STYLES ═══ */
+    .tile {
+      position: absolute;
+      overflow: hidden;
+      transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s ease;
+      box-sizing: border-box;
+      background-color: #111;
+      border: 1px solid var(--border);
+      z-index: 1;
+      opacity: 0;
+    }
+
+    .tile.ready {
+      opacity: 1;
+    }
+
+    /* ═══ LENS & CAM STRUCTURE ═══ */
+    .tile-inner {
+      position: absolute;
+      inset: 0;
+      will-change: transform;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tile-cam {
+      position: absolute;
+      inset: 0;
+      will-change: transform;
+      background-size: cover;
+      background-position: center;
+      transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .tile-cam img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      pointer-events: none;
+    }
+
+    /* ═══ FADE ANIMATIONS ═══ */
+    @keyframes tile-in {
+      from { opacity: 0; transform: scale(1.08); filter: brightness(0); }
+      to   { opacity: 1; transform: scale(1); filter: brightness(1); }
+    }
+    @keyframes tile-out {
+      from { opacity: 1; filter: blur(0px); }
+      to   { opacity: 0; filter: blur(8px); }
+    }
+
+    .fade-active .tile.ready {
+      animation: 
+        tile-in 1.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    #container {
+      opacity: 1;
+    }
+
+    /* ═══ LIGHTBOX (MODERN) ═══ */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .lightbox.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .lightbox-bg {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.92);
+      backdrop-filter: blur(12px);
+    }
+    .lightbox-panel {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      width: 90vw;
+      max-width: 1100px;
+      height: 80vh;
+      background: #111;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      transform: scale(0.95);
+      transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .lightbox.active .lightbox-panel { transform: scale(1); }
+
+    .lightbox-media {
+      flex: 1;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .lightbox-media img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .lightbox-info {
+      width: 320px;
+      padding: 40px 30px;
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      background: #0a0a0a;
+    }
+
+    .lb-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 26px;
+      color: var(--gold-light);
+      line-height: 1.2;
+    }
+    .lb-quote {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 16px;
+      color: #ccc;
+      border-left: 2px solid var(--gold);
+      padding-left: 15px;
+      line-height: 1.6;
+    }
+    .lb-concept {
+      font-size: 13px;
+      color: #777;
+      line-height: 1.8;
+    }
+    .lb-meta {
+      margin-top: auto;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      font-size: 12px;
+      color: #555;
+    }
+    .lb-stat { display: flex; align-items: center; gap: 5px; }
+
+    .lb-close {
+      position: absolute;
+      top: 20px; right: 20px;
+      z-index: 10;
+      color: #fff;
+      font-size: 24px;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: opacity 0.3s;
+    }
+    .lb-close:hover { opacity: 1; }
+
+    /* ═══ HOVER & INTERACTION ═══ */
+    .tile:hover {
+      z-index: 10;
+      border-color: var(--gold);
+      box-shadow: 0 0 30px rgba(201, 169, 110, 0.2);
+      cursor: pointer;
+    }
+
+    .tile.active {
+      position: fixed !important;
+      top: 10% !important;
+      left: 10% !important;
+      width: 80% !important;
+      height: 80% !important;
+      z-index: 100 !important;
+      outline: none;
+      box-shadow: 0 0 100px rgba(0, 0, 0, 0.9);
+      border-color: var(--gold);
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 50;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+
+    .overlay.visible {
+      display: block;
+      opacity: 1;
+    }
+
+    .info-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+      color: #fff;
+      padding: 30px 20px 20px 20px;
+      pointer-events: none;
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .tile:hover .info-overlay {
+      transform: translateY(0);
+    }
+
+    .tile-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      color: var(--gold-light);
+    }
+
+    /* ═══ NAV BAR ═══ */
+    .nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 60px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 25px;
+      z-index: 500;
+    }
+
+    .nav-logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      color: var(--gold-light);
+    }
+
+    .btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: #888;
+      padding: 6px 16px;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    .btn.active {
+      background: rgba(201, 169, 110, 0.1);
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    #empty-state {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--muted);
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
 
-  <header class="site-header">
-    <div class="header-inner">
-      <a href="index.html" class="site-logo">ASHLEY</a>
-      <p class="site-tagline">創作 · 想像 · 記錄</p>
-    </div>
-  </header>
+  <nav class="nav">
+    <div class="nav-logo">ASHLEY</div>
+  </nav>
 
-  <main class="gallery-grid" id="galleryGrid">
-    <div class="gallery-empty" id="galleryEmpty">
-      <p>作品陸續更新中…</p>
+  <div id="container" class="fade-active">
+    <div id="empty-state">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-gold mx-auto mb-4"></div>
+      <p class="text-xs tracking-widest">SYNCHRONIZING PORTFOLIO...</p>
     </div>
-  </main>
+  </div>
 
-  <!-- 燈箱 Lightbox -->
-  <div class="lightbox" id="lightbox" aria-modal="true" role="dialog">
-    <div class="lightbox-overlay" id="lightboxOverlay"></div>
+  <div id="lightbox" class="lightbox">
+    <div class="lightbox-bg" onclick="closeLightbox()"></div>
     <div class="lightbox-panel">
-      <button class="lightbox-close" id="lightboxClose" aria-label="關閉">&#10005;</button>
-
-      <div class="lightbox-media-wrap" id="lightboxMediaWrap">
-        <img class="lightbox-img" id="lightboxImg" src="" alt="">
-        <video class="lightbox-video hidden" id="lightboxVideo" controls playsinline></video>
-      </div>
-
+      <div class="lb-close" onclick="closeLightbox()">✕</div>
+      <div class="lightbox-media" id="lbMedia"></div>
       <div class="lightbox-info">
-        <h2 class="lightbox-title" id="lightboxTitle"></h2>
-        <blockquote class="lightbox-quote" id="lightboxQuote"></blockquote>
-        <p class="lightbox-concept" id="lightboxConcept"></p>
-
-        <div class="lightbox-meta">
-          <button class="like-btn" id="likeBtn" aria-label="按讚">
-            <svg class="like-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-            </svg>
-            <span class="like-count" id="likeCount">0</span>
-          </button>
-          <div class="view-count">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
-            <span id="viewCount">0</span>
-          </div>
+        <h2 class="lb-title" id="lbTitle">PROJECT TITLE</h2>
+        <div class="lb-quote" id="lbQuote">"Every piece of art tells a story."</div>
+        <div class="lb-concept" id="lbConcept">Concept description goes here. This is the inspiration behind the work.</div>
+        <div class="lb-meta">
+          <div class="lb-stat"><span id="lbViews">1.2k</span> Views</div>
+          <div class="lb-stat" style="color:var(--gold)"><span id="lbLikes">85</span> Likes</div>
         </div>
       </div>
     </div>
   </div>
 
-  <script type="module" src="js/firebase-config.js"></script>
-  <script type="module" src="js/gallery.js"></script>
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import { collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const container = document.getElementById('container');
+    const lightbox = document.getElementById('lightbox');
+    const emptyState = document.getElementById('empty-state');
+    
+    let projects = [];
+    let tileElements = [];
+    let isPaused = false;
+    let isGlobalFading = false;
+    let activeTileData = null; 
+    let lensRaf = null;
+    let lensT0 = null;
+
+    const DISPLAY_DURATION = 30000; // 30s fade cycle
+    const CHANGE_INTERVAL = 6000;   // 6s layout rearrange
+    const FADE_OUT_SPEED = 1500;    
+    const BLACK_DURATION = 800;     
+    const FADE_IN_SPEED = 800;      
+    const STAGGER_INTERVAL = 100;   
+
+    const GRADIENTS = [
+      'linear-gradient(145deg,#12003a,#5a1fa8,#9b6de0)',
+      'linear-gradient(145deg,#1e0900,#7a3800,#c9820d)',
+      'linear-gradient(145deg,#001a1a,#0a6060,#15b8b8)',
+      'linear-gradient(145deg,#1a1000,#7a5500,#c9a96e)'
+    ];
+
+    // ═══ CORE: RECURSIVE PARTITIONING ═══
+    function generateLayout(x, y, width, height, count) {
+      if (count <= 0) return [];
+      if (count <= 1) return [{ x, y, width, height }];
+
+      const splitAtHalf = Math.floor(count / 2);
+      const isHorizontal = width > height;
+      const result = [];
+
+      if (isHorizontal) {
+        const splitWidth = width * (0.35 + Math.random() * 0.3);
+        result.push(...generateLayout(x, y, splitWidth, height, splitAtHalf));
+        result.push(...generateLayout(x + splitWidth, y, width - splitWidth, height, count - splitAtHalf));
+      } else {
+        const splitHeight = height * (0.35 + Math.random() * 0.3);
+        result.push(...generateLayout(x, y, width, splitHeight, splitAtHalf));
+        result.push(...generateLayout(x, y + splitHeight, width, height - splitHeight, count - splitAtHalf));
+      }
+      return result;
+    }
+
+    function syncTilesWithData() {
+      emptyState.style.display = projects.length === 0 ? 'block' : 'none';
+
+      while (tileElements.length > projects.length) {
+        const el = tileElements.pop();
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 600);
+      }
+
+      while (tileElements.length < projects.length) {
+        const i = tileElements.length;
+        const el = document.createElement('article');
+        el.className = 'tile';
+
+        const inner = document.createElement('div');
+        inner.className = 'tile-inner';
+
+        const cam = document.createElement('div');
+        cam.className = 'tile-cam';
+        
+        cam._phase = {
+          x: Math.random() * Math.PI * 2,
+          y: Math.random() * Math.PI * 2,
+          animType: Math.floor(Math.random() * 4),
+          phaseOff: Math.random() * 20000,
+          lensCycle: (8000 + Math.random() * 6000) * 2
+        };
+
+        const info = document.createElement('div');
+        info.className = 'info-overlay';
+        info.innerHTML = `<div class="tile-title">PROJECT</div>`;
+
+        inner.appendChild(cam);
+        el.appendChild(inner);
+        el.appendChild(info);
+
+        container.appendChild(el);
+        tileElements.push(el);
+      }
+
+      const layout = generateLayout(0, 60, window.innerWidth, window.innerHeight - 60, projects.length);
+
+      tileElements.forEach((el, i) => {
+        const data = projects[i];
+        const rect = layout[i];
+        const cam = el.querySelector('.tile-cam');
+
+        if (data.img) {
+          const newBg = `url("${data.img}")`;
+          if (cam.style.backgroundImage !== newBg) {
+            cam.style.backgroundImage = newBg;
+            cam.style.backgroundSize = 'cover';
+          }
+        } else {
+          cam.style.background = GRADIENTS[i % GRADIENTS.length];
+        }
+        el.querySelector('.tile-title').innerText = data.title;
+        el.onclick = (e) => { e.stopPropagation(); openLightbox(data); };
+
+        if (rect) {
+          el.style.left = `${rect.x}px`;
+          el.style.top = `${rect.y}px`;
+          el.style.width = `${rect.width}px`;
+          el.style.height = `${rect.height}px`;
+          setTimeout(() => el.classList.add('ready'), 50);
+        }
+      });
+    }
+
+    // ═══ LENS ANIMATION (50% Speed) ═══
+    function lensAnim(ts) {
+      if (!lensT0) lensT0 = ts;
+      const elapsed = ts - lensT0;
+
+      tileElements.forEach(el => {
+        const inner = el.querySelector('.tile-inner');
+        const cam = el.querySelector('.tile-cam');
+        if (!cam || !cam._phase || activeTileData) return; // Removed isGlobalFading so it keeps moving during fade
+
+        const ph = cam._phase;
+        const localT = elapsed + ph.phaseOff;
+        const cycle = ph.lensCycle;
+        const t01 = (localT % cycle) / cycle;
+        const tAbs = localT;
+
+        switch (ph.animType) {
+          case 0: { 
+            const ox = 50 + Math.sin(t01 * Math.PI * 2) * 30;
+            inner.style.transformOrigin = `${ox}% 50%`;
+            inner.style.transform = 'scale(1.6)';
+            break;
+          }
+          case 1: { 
+            const oy = 50 + Math.sin(t01 * Math.PI * 2) * 30;
+            inner.style.transformOrigin = `50% ${oy}%`;
+            inner.style.transform = 'scale(1.6)';
+            break;
+          }
+          case 2: { 
+            const fx = 50 
+              + Math.sin(tAbs * 0.000165 + ph.x) * 10
+              + Math.sin(tAbs * 0.000435 + ph.y) * 4;
+            const fy = 50 
+              + Math.cos(tAbs * 0.00012 + ph.y) * 8
+              + Math.cos(tAbs * 0.000375 + ph.x) * 3;
+            inner.style.transformOrigin = `${fx}% ${fy}%`;
+            inner.style.transform = 'scale(1.7)';
+            break;
+          }
+          case 3: { 
+            const sc = 1.1 + (Math.sin(t01 * Math.PI * 2) + 1) * 0.25;
+            inner.style.transformOrigin = '50% 50%';
+            inner.style.transform = `scale(${sc})`;
+            break;
+          }
+          default: {
+            inner.style.transform = 'scale(1.4)';
+          }
+        }
+      });
+      lensRaf = requestAnimationFrame(lensAnim);
+    }
+
+    // ═══ LIGHTBOX LOGIC ═══
+    window.openLightbox = function(data) {
+      activeTileData = data;
+      const media = document.getElementById('lbMedia');
+      media.innerHTML = `<img src="${data.img}" alt="">`;
+      document.getElementById('lbTitle').innerText = data.title;
+      document.getElementById('lbQuote').innerText = data.quote || '“藝術是心靈的鏡像。”';
+      document.getElementById('lbConcept').innerText = data.concept || '這件作品探索了光影與情感的邊界，呈現出一種靜謐的內在對話。';
+      document.getElementById('lbViews').innerText = data.views.toLocaleString();
+      document.getElementById('lbLikes').innerText = data.likes.toLocaleString();
+      lightbox.classList.add('active');
+    };
+
+    window.closeLightbox = function() {
+      activeTileData = null;
+      lightbox.classList.remove('active');
+    };
+
+    // ═══ EVENT LISTENERS ═══
+    container.onmouseenter = () => { isPaused = true; };
+    container.onmouseleave = () => { isPaused = false; };
+    window.addEventListener('resize', syncTilesWithData);
+
+    // ═══ STAGGERED FADE LOGIC ═══
+    function staggeredFade(type, callback) {
+      const tiles = [...tileElements].sort((a, b) => {
+        const ra = a.getBoundingClientRect();
+        const rb = b.getBoundingClientRect();
+        return (ra.top + ra.left) - (rb.top + rb.left); 
+      });
+
+      if (tiles.length === 0) {
+        callback();
+        return;
+      }
+
+      const duration = type === 'out' ? FADE_OUT_SPEED : FADE_IN_SPEED;
+      
+      tiles.forEach((tile, i) => {
+        setTimeout(() => {
+          tile.style.transition = `opacity ${duration}ms ease, left 0.8s cubic-bezier(0.4, 0, 0.2, 1), top 0.8s cubic-bezier(0.4, 0, 0.2, 1), width 0.8s cubic-bezier(0.4, 0, 0.2, 1), height 0.8s cubic-bezier(0.4, 0, 0.2, 1)`;
+          tile.style.opacity = type === 'out' ? '0' : '1';
+        }, i * STAGGER_INTERVAL);
+      });
+
+      const totalWait = (tiles.length - 1) * STAGGER_INTERVAL + duration;
+      setTimeout(callback, Math.max(0, totalWait));
+    }
+
+    // ═══ GLOBAL CYCLE LOGIC ═══
+    let cycleTimeout = null;
+    function runGlobalCycle() {
+      if (cycleTimeout) clearTimeout(cycleTimeout);
+      if (isPaused || activeTileData) {
+        cycleTimeout = setTimeout(runGlobalCycle, 1000);
+        return;
+      }
+
+      cycleTimeout = setTimeout(() => {
+        if (isPaused || activeTileData) { runGlobalCycle(); return; }
+
+        isGlobalFading = true; // Block 6s rearrange
+        staggeredFade('out', () => {
+          setTimeout(() => {
+            syncTilesWithData();
+            staggeredFade('in', () => {
+              isGlobalFading = false;
+              runGlobalCycle();
+            });
+          }, BLACK_DURATION);
+        });
+
+      }, DISPLAY_DURATION);
+    }
+
+    // ═══ FETCH DATA FROM FIREBASE ═══
+    function fetchCloudData() {
+      const q = query(collection(db, "artworks"), orderBy("createdAt", "desc"));
+      onSnapshot(q, (snap) => {
+        const newProjects = [];
+        snap.forEach(docSnap => {
+          const d = docSnap.data();
+          newProjects.push({
+            id: docSnap.id,
+            title: d.title || "Untitled",
+            img: d.mediaUrl,
+            views: d.views || 0,
+            likes: d.likes || 0,
+            quote: d.quote || "“光線在黑暗中更有力量。”",
+            concept: d.concept || "這是一場關於自然與科技共生的視覺實驗。"
+          });
+        });
+
+        const isFirstLoad = projects.length === 0;
+        projects = newProjects;
+
+        // 避免在淡出淡入過程中打斷動畫
+        if (!isGlobalFading || isFirstLoad) {
+          syncTilesWithData();
+        }
+
+        if (isFirstLoad) {
+          tileElements.forEach(t => t.style.opacity = '1');
+          lensRaf = requestAnimationFrame(lensAnim);
+          runGlobalCycle();
+          
+          // Start the dynamic tiling 6s rearrange cycle
+          setInterval(() => {
+            if (!isPaused && !activeTileData && !isGlobalFading && projects.length > 0) {
+              syncTilesWithData();
+            }
+          }, CHANGE_INTERVAL);
+        }
+      });
+    }
+
+    window.onload = fetchCloudData;
+  </script>
 </body>
 </html>

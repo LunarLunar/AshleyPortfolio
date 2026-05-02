@@ -43,50 +43,7 @@
         <form id="uploadForm" novalidate>
 
           <div class="form-row">
-            <label>作品名稱 <span class="req">*</span></label>
-            <input type="text" id="artTitle" placeholder="例：夜晚的街角" required>
-          </div>
-
-          <div class="form-row">
-            <label>Ashley 的話 <span class="req">*</span>
-              <span class="hint">（顯示在燈箱內的引言）</span>
-            </label>
-            <textarea id="artQuote" rows="3" placeholder="寫下你對這幅作品的感受…" required></textarea>
-          </div>
-
-          <div class="form-row">
-            <label>概念說明
-              <span class="hint">（創作背後的想法，可選填）</span>
-            </label>
-            <textarea id="artConcept" rows="4" placeholder="這件作品的靈感來自…"></textarea>
-          </div>
-
-          <div class="form-row">
-            <label>類型</label>
-            <div class="radio-group">
-              <label class="radio-label">
-                <input type="radio" name="artType" value="image" checked> 圖片
-              </label>
-              <label class="radio-label">
-                <input type="radio" name="artType" value="video"> 影片
-              </label>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <label>圖片方向（圖片類型才需選）</label>
-            <div class="radio-group">
-              <label class="radio-label">
-                <input type="radio" name="artOrientation" value="landscape" checked> 橫向 16:9
-              </label>
-              <label class="radio-label">
-                <input type="radio" name="artOrientation" value="portrait"> 直向
-              </label>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <label>選擇檔案 <span class="req">*</span></label>
+            <label>拖曳或選取檔案 <span class="req">*</span></label>
             <div class="file-drop-zone" id="dropZone">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -105,6 +62,35 @@
             </div>
           </div>
 
+          <div class="form-row">
+            <label>類型
+              <span class="hint" id="typeHint">（自動偵測中）</span>
+            </label>
+            <div class="radio-group">
+              <label class="radio-label"><input type="radio" name="artType" value="image" checked> 圖片</label>
+              <label class="radio-label"><input type="radio" name="artType" value="video"> 影片</label>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label>作品名稱 <span class="req">*</span></label>
+            <input type="text" id="artTitle" placeholder="例：夜晚的街角" required>
+          </div>
+
+          <div class="form-row">
+            <label>Ashley 的話 <span class="req">*</span>
+              <span class="hint">（顯示在燈箱內的引言）</span>
+            </label>
+            <textarea id="artQuote" rows="3" placeholder="寫下你對這幅作品的感受…" required></textarea>
+          </div>
+
+          <div class="form-row">
+            <label>概念說明
+              <span class="hint">（創作背後的想法，可選填）</span>
+            </label>
+            <textarea id="artConcept" rows="4" placeholder="這件作品的靈感來自…"></textarea>
+          </div>
+
           <div class="upload-progress hidden" id="uploadProgress">
             <div class="progress-bar">
               <div class="progress-fill" id="progressFill"></div>
@@ -120,6 +106,7 @@
       <!-- 作品管理列表 -->
       <section class="manage-section">
         <h2>管理現有作品</h2>
+        <p class="manage-hint">鼓勵功能請前往 <a href="boost.html">鼓勵後台</a></p>
         <div class="manage-list" id="manageList">
           <p class="manage-empty">載入中…</p>
         </div>

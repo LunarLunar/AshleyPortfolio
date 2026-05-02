@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASHLEY — Gallery Layout Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #c9a96e;
+      --gold-light: #e8d5b0;
+      --bg: #000;
+      --gap: #111;
+      --border: #1e1e1e;
+      --muted: #555;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    /* ═══ CONTROL BAR ═══ */
+    .ctrl {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 48px;
+      background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 18px;
+      gap: 16px;
+      z-index: 500;
+    }
+
+    .ctrl-logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      color: var(--gold-light);
+      white-space: nowrap;
+    }
+
+    .ctrl-logo em {
+      font-size: 11px;
+      font-weight: 300;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-left: 10px;
+      font-style: normal;
+    }
+
+    .ctrl-divider {
+      width: 1px;
+      height: 22px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    .ctrl-modes {
+      display: flex;
+      gap: 4px;
+    }
+
+    .mode-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 5px 14px;
+      border-radius: 3px;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: border-color 0.18s, color 0.18s, background 0.18s;
+    }
+
+    .mode-btn:hover:not(.active) {
+      border-color: #333;
+      color: #888;
+    }
+
+    .mode-btn.active {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: rgba(201, 169, 110, 0.07);
+    }
+
+    .fade-btn {
+      margin-left: 8px;
+      border-color: #444;
+      color: #777;
+    }
+    .fade-btn.on {
+      border-color: #00ff88;
+      color: #00ff88;
+      background: rgba(0, 255, 136, 0.05);
+    }
+
+    .ctrl-desc {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .load-btn {
+      margin-left: auto;
+      background: transparent;
+      border: 1px solid #2a2a2a;
+      color: #555;
+      padding: 5px 14px;
+      border-radius: 3px;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: border-color 0.18s, color 0.18s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .load-btn:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    /* ═══ MOSAIC GRID ═══ */
+    .mosaic {
+      position: fixed;
+      top: 48px;
+      left: 0; right: 0; bottom: 0;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      --row-h: calc((100dvh - 50px) / 4);
+      grid-auto-rows: var(--row-h);
+      gap: 2px;
+      background: var(--gap);
+    }
+
+    /* ═══ TILE ═══ */
+    .tile {
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    /* Entrance & Exit animation */
+    @keyframes tile-in {
+      from { opacity: 0; filter: brightness(0); transform: scale(1.05); }
+      to   { opacity: 1; filter: brightness(1); transform: scale(1); }
+    }
+    @keyframes tile-out {
+      from { opacity: 1; filter: blur(0px); }
+      to   { opacity: 0; filter: blur(4px); }
+    }
+
+    .tile { 
+      opacity: 1; /* Default visibility when fade is off */
+    }
+
+    .mosaic.fade-active .tile {
+      animation: 
+        tile-in 2.0s cubic-bezier(0.22, 1, 0.36, 1) both,
+        tile-out 2.0s ease var(--stay-delay, 5s) forwards,
+        tile-breath 10s ease-in-out infinite alternate; 
+    }
+
+    /* Subtle breathing for the grid frames themselves */
+    @keyframes tile-breath {
+      0%   { transform: scale(1); }
+      100% { transform: scale(1.015); }
+    }
+
+    /* Inner: LENS animation layer */
+    .tile-inner {
+      position: absolute;
+      inset: 0;
+      will-change: transform;
+      overflow: hidden;
+    }
+
+    /* Cam: PAN hover layer (inside inner) */
+    .tile-cam {
+      position: absolute;
+      inset: 0;
+      will-change: transform;
+      transition: transform 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .tile-cam img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      pointer-events: none;
+    }
+
+    /* Hover label overlay */
+    .tile-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 55%);
+      opacity: 0;
+      transition: opacity 0.28s ease;
+      display: flex;
+      align-items: flex-end;
+      padding: 12px 14px;
+      pointer-events: none;
+    }
+
+    .tile:hover .tile-overlay { opacity: 1; }
+
+    .tile-num {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 20px;
+      font-weight: 300;
+      color: rgba(255, 255, 255, 0.5);
+      letter-spacing: 0.12em;
+    }
+
+    /* ═══ TILT MODE overrides ═══ */
+    .mosaic.mode-tilt .tile {
+      overflow: visible;
+      z-index: 1;
+    }
+
+    .mosaic.mode-tilt .tile-inner {
+      overflow: hidden;
+    }
+
+    /* ═══ LIGHTBOX ═══ */
+    .lb {
+      position: fixed;
+      inset: 0;
+      z-index: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .lb.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .lb-bg {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.9);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .lb-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 82vw;
+      max-height: 82vh;
+      border-radius: 3px;
+      overflow: hidden;
+      box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8);
+      transform: scale(0.96) translateY(8px);
+      transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .lb.open .lb-wrap {
+      transform: scale(1) translateY(0);
+    }
+
+    .lb-wrap img {
+      max-width: 82vw;
+      max-height: 82vh;
+      display: block;
+      object-fit: contain;
+    }
+
+    .lb-swatch {
+      width: 500px;
+      height: 360px;
+    }
+
+    .lb-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 2;
+      background: rgba(0, 0, 0, 0.55);
+      border: none;
+      color: rgba(255,255,255,0.75);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+      line-height: 1;
+    }
+
+    .lb-close:hover { background: rgba(255,255,255,0.15); }
+
+    /* ═══ MODE SPECIFIC EFFECTS ═══ */
+    
+    /* GLITCH EFFECT */
+    .mosaic.mode-glitch .tile:hover img {
+      animation: glitch-anim 0.3s infinite;
+      filter: contrast(1.2) saturate(1.5);
+    }
+    @keyframes glitch-anim {
+      0% { transform: translate(0); clip-path: inset(0 0 0 0); }
+      20% { transform: translate(-2px, 1px); clip-path: inset(10% 0 30% 0); }
+      40% { transform: translate(2px, -1px); clip-path: inset(40% 0 10% 0); }
+      60% { transform: translate(-1px, 2px); clip-path: inset(80% 0 5% 0); }
+      80% { transform: translate(1px, -2px); clip-path: inset(5% 0 70% 0); }
+      100% { transform: translate(0); clip-path: inset(0 0 0 0); }
+    }
+
+    /* LIQUID EFFECT (SVG Filter based) */
+    .mosaic.mode-liquid .tile-cam {
+      filter: url(#liquid-filter);
+    }
+
+    /* BLOOM EFFECT */
+    .mosaic.mode-bloom .tile-inner {
+      transition: filter 0.4s ease, transform 0.4s ease;
+    }
+    .mosaic.mode-bloom .tile:hover .tile-inner {
+      filter: brightness(1.2) blur(1px) drop-shadow(0 0 15px rgba(255,255,255,0.4));
+      transform: scale(1.05);
+    }
+
+    /* RGB EFFECT */
+    .mosaic.mode-rgb .tile-cam::before,
+    .mosaic.mode-rgb .tile-cam::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: inherit;
+      background-image: inherit;
+      mix-blend-mode: screen;
+      pointer-events: none;
+      display: none;
+    }
+    .mosaic.mode-rgb .tile:hover .tile-cam::before,
+    .mosaic.mode-rgb .tile:hover .tile-cam::after {
+      display: block;
+    }
+    .mosaic.mode-rgb .tile:hover .tile-cam img {
+      filter: brightness(1.1);
+    }
+    .mosaic.mode-rgb .tile:hover .tile-cam::before {
+      transform: translateX(3px);
+      filter: brightness(1) drop-shadow(-3px 0 0 red);
+      opacity: 0.5;
+    }
+    .mosaic.mode-rgb .tile:hover .tile-cam::after {
+      transform: translateX(-3px);
+      filter: brightness(1) drop-shadow(3px 0 0 blue);
+      opacity: 0.5;
+    }
+
+    /* ═══ BOTTOM HINT ═══ */
+    .hint {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      padding: 5px 18px;
+      border-radius: 30px;
+      pointer-events: none;
+      z-index: 400;
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="ctrl">
+    <span class="ctrl-logo">ASHLEY <em>Gallery Demo</em></span>
+    <div class="ctrl-divider"></div>
+
+    <div class="ctrl-modes">
+      <button class="mode-btn active" data-m="pan">A · PAN 平移</button>
+      <button class="mode-btn" data-m="tilt">B · TILT 傾斜</button>
+      <button class="mode-btn" data-m="lens">C · LENS 放大</button>
+      <button class="mode-btn" data-m="glitch">D · GLITCH 故障</button>
+      <button class="mode-btn" data-m="liquid">E · LIQUID 液態</button>
+      <button class="mode-btn" data-m="bloom">F · BLOOM 柔光</button>
+      <button class="mode-btn" data-m="rgb">G · RGB 偏移</button>
+      <button class="mode-btn fade-btn" id="fadeToggle">FADE: OFF</button>
+    </div>
+
+    <span class="ctrl-desc" id="modeDesc">游標移動時圖片向反方向平移，仿相機橫掃視角</span>
+
+    <button class="load-btn" id="loadBtn">↑ 載入圖片資料夾</button>
+    <input type="file" id="folderInput" webkitdirectory multiple accept="image/*" hidden>
+  </nav>
+
+  <div class="mosaic mode-pan" id="mosaic"></div>
+
+  <div class="lb" id="lb">
+    <div class="lb-bg" id="lbBg"></div>
+    <div class="lb-wrap" id="lbWrap"></div>
+    <button class="lb-close" id="lbClose">&#215;</button>
+  </div>
+
+  <div class="hint" id="hint">A · PAN — 移動游標體驗相機平移效果</div>
+
+  <!-- SVG Filters for Effects -->
+  <svg style="position: absolute; width: 0; height: 0;" aria-hidden="true">
+    <filter id="liquid-filter">
+      <feTurbulence type="fractalNoise" baseFrequency="0.01 0.01" numOctaves="1" result="warp">
+        <animate attributeName="baseFrequency" from="0.01 0.01" to="0.015 0.02" dur="5s" repeatCount="indefinite" />
+      </feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="warp" scale="20" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </svg>
+
+  <script>
+    // ═══ 7 LAYOUTS — all 13 tiles / 48 cells (12-col × 4-row), no clip ═══
+    // ── 7 layouts, all 13 tiles / 48 cells, no clip-path ──
+    const LAYOUTS = [
+      // L0 original mosaic
+      [{ cs:'1/5',rs:'1/3'},{cs:'5/7',rs:'1/3'},{cs:'7/9',rs:'1/2'},{cs:'9/13',rs:'1/2'},
+       {cs:'7/9',rs:'2/3'},{cs:'9/13',rs:'2/3'},{cs:'1/4',rs:'3/5'},{cs:'4/7',rs:'3/4'},
+       {cs:'7/10',rs:'3/4'},{cs:'10/13',rs:'3/4'},{cs:'4/7',rs:'4/5'},{cs:'7/10',rs:'4/5'},{cs:'10/13',rs:'4/5'}],
+      // L1 left-heavy block
+      [{ cs:'1/7',rs:'1/3'},{cs:'7/10',rs:'1/2'},{cs:'10/13',rs:'1/2'},{cs:'7/10',rs:'2/3'},
+       {cs:'10/13',rs:'2/3'},{cs:'1/4',rs:'3/5'},{cs:'4/6',rs:'3/4'},{cs:'6/8',rs:'3/4'},
+       {cs:'8/10',rs:'3/4'},{cs:'10/13',rs:'3/5'},{cs:'4/6',rs:'4/5'},{cs:'6/8',rs:'4/5'},{cs:'8/10',rs:'4/5'}],
+      // L2 column rhythm
+      [{ cs:'1/4',rs:'1/2'},{cs:'4/7',rs:'1/2'},{cs:'7/10',rs:'1/2'},{cs:'10/13',rs:'1/3'},
+       {cs:'1/4',rs:'2/4'},{cs:'4/7',rs:'2/3'},{cs:'7/10',rs:'2/3'},{cs:'10/13',rs:'3/4'},
+       {cs:'4/7',rs:'3/4'},{cs:'7/10',rs:'3/5'},{cs:'1/4',rs:'4/5'},{cs:'4/7',rs:'4/5'},{cs:'10/13',rs:'4/5'}],
+      // L3 tall left anchor
+      [{ cs:'1/5',rs:'1/4'},{cs:'5/7',rs:'1/2'},{cs:'7/9',rs:'1/3'},{cs:'9/13',rs:'1/3'},
+       {cs:'5/7',rs:'2/3'},{cs:'5/7',rs:'3/4'},{cs:'7/9',rs:'3/5'},{cs:'9/11',rs:'3/4'},
+       {cs:'11/13',rs:'3/4'},{cs:'1/5',rs:'4/5'},{cs:'5/7',rs:'4/5'},{cs:'9/11',rs:'4/5'},{cs:'11/13',rs:'4/5'}],
+      // L4 right-heavy block (mirror of L1)
+      [{ cs:'7/13',rs:'1/3'},{cs:'4/7',rs:'1/2'},{cs:'1/4',rs:'1/2'},{cs:'4/7',rs:'2/3'},
+       {cs:'1/4',rs:'2/3'},{cs:'10/13',rs:'3/5'},{cs:'8/10',rs:'3/4'},{cs:'6/8',rs:'3/4'},
+       {cs:'4/6',rs:'3/4'},{cs:'1/4',rs:'3/5'},{cs:'8/10',rs:'4/5'},{cs:'6/8',rs:'4/5'},{cs:'4/6',rs:'4/5'}],
+      // L5 horizontal strips (top row + 3 wide blocks + bottom row)
+      [{ cs:'1/3',rs:'1/2'},{cs:'3/5',rs:'1/2'},{cs:'5/9',rs:'1/2'},{cs:'9/11',rs:'1/2'},
+       {cs:'11/13',rs:'1/2'},{cs:'1/5',rs:'2/4'},{cs:'5/9',rs:'2/4'},{cs:'9/13',rs:'2/4'},
+       {cs:'1/3',rs:'4/5'},{cs:'3/5',rs:'4/5'},{cs:'5/9',rs:'4/5'},{cs:'9/11',rs:'4/5'},{cs:'11/13',rs:'4/5'}],
+      // L6 scattered pinwheel
+      [{ cs:'1/6',rs:'1/2'},{cs:'6/9',rs:'1/2'},{cs:'9/13',rs:'1/2'},{cs:'1/6',rs:'2/4'},
+       {cs:'6/8',rs:'2/3'},{cs:'8/10',rs:'2/4'},{cs:'10/13',rs:'2/4'},{cs:'6/8',rs:'3/4'},
+       {cs:'1/3',rs:'4/5'},{cs:'3/6',rs:'4/5'},{cs:'6/9',rs:'4/5'},{cs:'9/11',rs:'4/5'},{cs:'11/13',rs:'4/5'}],
+    ];
+
+    const GRADIENTS = [
+      'linear-gradient(145deg,#12003a,#5a1fa8,#9b6de0)','linear-gradient(145deg,#001833,#0a4d8c,#2d9cd4)',
+      'linear-gradient(145deg,#1e0900,#7a3800,#c9820d)','linear-gradient(145deg,#001a09,#0a5c28,#1db563)',
+      'linear-gradient(145deg,#1a0000,#6e0a0a,#c02020)','linear-gradient(145deg,#0a0018,#2a1266,#5a3aaa)',
+      'linear-gradient(145deg,#001a1a,#0a6060,#15b8b8)','linear-gradient(145deg,#1a1000,#7a5500,#c9a96e)',
+      'linear-gradient(145deg,#15002a,#602080,#a850d8)','linear-gradient(145deg,#00101e,#103060,#1e5898)',
+      'linear-gradient(145deg,#1a0a0a,#6e2222,#b84444)','linear-gradient(145deg,#0a1a08,#2e6a20,#5ab840)',
+      'linear-gradient(145deg,#1a1a00,#6e6e00,#c8c820)',
+    ];
+
+    const MODE_CONFIG = {
+      pan:    { desc:'游標移動時圖片向反方向平移；排列每 15 秒自動切換', hint:'A · PAN — 移動游標體驗相機平移' },
+      tilt:   { desc:'整張卡片 3D 透視傾斜；排列每 15 秒自動切換',       hint:'B · TILT — 移動游標體驗 3D 傾斜' },
+      lens:   { desc:'每張圖隨機播放 7 種運鏡動畫；5s 後隨機切換 Crop', hint:'C · LENS — 每張圖獨立隨機運鏡，可同時 hover' },
+      glitch: { desc:'滑過時觸發數位故障毀損特效；充滿科技感',       hint:'D · GLITCH — 滑過圖片體驗數位故障特效' },
+      liquid: { desc:'全版面液態流動波紋；仿水面動態效果',           hint:'E · LIQUID — 體驗全場域液態波紋流動' },
+      bloom:  { desc:'滑過時產生夢幻柔光與溢光效果',               hint:'F · BLOOM — 滑過體驗電影感溢光與柔焦' },
+      rgb:    { desc:'滑過時產生 RGB 三原色分離錯位效果',           hint:'G · RGB — 滑過體驗色彩分離特效' },
+    };
+
+    let currentMode      = 'pan';
+    let loadedUrls       = [];
+    let currentLayoutIdx = 0;
+    let layoutTimer      = null;
+    let fadeEnabled      = false; // Default to OFF as requested
+
+    // ── 建立單一螢幕的 tiles，rowOffset 用於多螢幕堆疊 ──
+    function appendScreen(mosaic, layout, urls, imgOffset, rowOffset) {
+      layout.forEach((t, i) => {
+        const imgIdx = imgOffset + i;
+        if (urls.length > 0 && imgIdx >= urls.length) return;
+
+        const [ra, rb] = t.rs.split('/').map(Number);
+
+        const article = document.createElement('article');
+        article.className = 'tile';
+        article.style.gridColumn = t.cs;
+        article.style.gridRow    = `${ra + rowOffset}/${rb + rowOffset}`;
+        
+        // 設定每張圖不同的停留時間 (4.5, 5, 5.5, 6, 6.5 秒)
+        const stayTimes = [4500, 5000, 5500, 6000, 6500];
+        const stay = stayTimes[Math.floor(Math.random() * stayTimes.length)];
+        const stagger = Math.min(i * 40, 600); // 初始進入的交錯感
+        
+        article.style.setProperty('--stay-delay', `${stay + stagger}ms`);
+        // 淡入動畫延遲只有 stagger，淡出動畫延遲則是 stagger + stay
+        article.style.animationDelay = `${stagger}ms, ${stagger + stay}ms, ${Math.random()*5}s`; 
+
+        const inner = document.createElement('div');
+        inner.className = 'tile-inner';
+        // 為 15 秒全版面動畫準備的 transition
+        inner.style.transition = 'transform-origin 2s ease-in-out, transform 2s ease-in-out';
+
+        const cam = document.createElement('div');
+        cam.className = 'tile-cam';
+        cam._phase = {
+          x:        Math.random() * Math.PI * 2,
+          y:        Math.random() * Math.PI * 2,
+          animType: Math.floor(Math.random() * 7),
+          phaseOff: Math.random() * 9000,
+          lensCycle: stayTimes[Math.floor(Math.random() * stayTimes.length)] * 1.5, // 運鏡週期也隨機化
+        };
+
+        if (urls.length > 0) {
+          const img = document.createElement('img');
+          img.src     = urls[imgIdx];
+          img.alt     = `作品 ${imgIdx + 1}`;
+          img.loading = 'lazy';
+          cam.appendChild(img);
+        } else {
+          cam.style.background = GRADIENTS[imgOffset + i < GRADIENTS.length ? imgOffset + i : i % GRADIENTS.length];
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'tile-overlay';
+        overlay.innerHTML = `<span class="tile-num">${String(imgIdx + 1).padStart(2, '0')}</span>`;
+        cam.appendChild(overlay);
+        inner.appendChild(cam);
+        article.appendChild(inner);
+
+        const grad = GRADIENTS[(imgOffset + i) % GRADIENTS.length];
+        article.addEventListener('mousemove', e => onHover(e, article, cam));
+        article.addEventListener('mouseleave', ()  => onLeave(article, cam));
+        article.addEventListener('click', () =>
+          openLb(urls.length > 0 ? urls[imgIdx] : null, grad)
+        );
+
+        mosaic.appendChild(article);
+      });
+    }
+
+    // ── buildGrid：無圖片 = 單螢幕 demo；有圖片 = 全部圖堆疊顯示 ──
+    function buildGrid(urls = []) {
+      const mosaic = document.getElementById('mosaic');
+      mosaic.innerHTML = '';
+      mosaic.scrollTop = 0;
+
+      if (urls.length === 0) {
+        appendScreen(mosaic, LAYOUTS[currentLayoutIdx], [], 0, 0);
+        return;
+      }
+
+      const perScreen = LAYOUTS[currentLayoutIdx].length;
+      const screens   = Math.ceil(urls.length / perScreen);
+      for (let s = 0; s < screens; s++) {
+        const lIdx = (currentLayoutIdx + s) % LAYOUTS.length;
+        appendScreen(mosaic, LAYOUTS[lIdx], urls, s * perScreen, s * 4);
+      }
+    }
+
+    // ── 排列切換（fade rebuild）──
+    function morphLayout(newIdx) {
+      if (lensRaf) { cancelAnimationFrame(lensRaf); lensRaf = null; }
+      const tiles = Array.from(document.querySelectorAll('#mosaic .tile'));
+      tiles.forEach(t => { t.style.transition = 'opacity 0.35s ease'; t.style.opacity = '0'; });
+      setTimeout(() => {
+        currentLayoutIdx = newIdx;
+        buildGrid(loadedUrls);
+        if (currentMode === 'lens') { lensT0 = null; lensRaf = requestAnimationFrame(lensAnim); }
+      }, 380);
+    }
+
+    function startLayoutRotation() {
+      layoutTimer = setInterval(() => {
+        // 50% 機率切換 Layout，50% 機率僅進行「全版面隨機縮放 (Visual Refresh)」
+        if (Math.random() > 0.5) {
+          let next;
+          do { next = Math.floor(Math.random() * LAYOUTS.length); }
+          while (next === currentLayoutIdx && LAYOUTS.length > 1);
+          morphLayout(next);
+        } else {
+          refreshVisualStates();
+        }
+      }, 15000);
+    }
+
+    // ── 全版面隨機縮放刷新 (每 15 秒觸發一次，保持滿版但改變顯示區域) ──
+    function refreshVisualStates() {
+      document.querySelectorAll('.tile-inner').forEach(el => {
+        if (currentMode === 'lens') return; // LENS 模式已有獨立動畫
+        const sc = 1.1 + Math.random() * 0.6; // 1.1x ~ 1.7x 縮放
+        const ox = 10 + Math.random() * 80;
+        const oy = 10 + Math.random() * 80;
+        el.style.transformOrigin = `${ox}% ${oy}%`;
+        el.style.transform = `scale(${sc})`;
+      });
+    }
+
+    // ── Hover：PAN 在 cam，TILT 在 tile，兩者可同時 ──
+    function onHover(e, tile, cam) {
+      const r  = tile.getBoundingClientRect();
+      const dx = (e.clientX - r.left) / r.width  - 0.5;
+      const dy = (e.clientY - r.top)  / r.height - 0.5;
+
+      if (currentMode === 'pan' || currentMode === 'lens') {
+        const mag = currentMode === 'lens' ? -9 : -18;
+        const sc  = currentMode === 'lens' ? 1.0 : 1.2;
+        cam.style.transition = 'transform 0.09s linear';
+        cam.style.transform  = `scale(${sc}) translate(${dx * mag}%, ${dy * mag}%)`;
+      }
+      if (currentMode === 'tilt' || currentMode === 'lens') {
+        tile.style.overflow   = 'visible';
+        tile.style.transition = 'transform 0.1s ease-out';
+        tile.style.zIndex     = '30';
+        tile.style.transform  = `perspective(520px) rotateX(${dy*-14}deg) rotateY(${dx*14}deg) scale(1.04)`;
+      }
+    }
+
+    function onLeave(tile, cam) {
+      const ease = 'transform 0.52s cubic-bezier(0.22,1,0.36,1)';
+      cam.style.transition  = ease;
+      cam.style.transform   = '';
+      tile.style.overflow   = '';
+      tile.style.transition = ease;
+      tile.style.transform  = '';
+      tile.style.zIndex     = '';
+    }
+
+    // ── LENS：每張圖獨立隨機運鏡，5 種類型 ──
+    let lensRaf = null;
+    let lensT0  = null;
+
+    function lensAnim(ts) {
+      if (!lensT0) lensT0 = ts;
+      const elapsed = ts - lensT0;
+
+      document.querySelectorAll('#mosaic .tile-inner').forEach(el => {
+        const cam = el.querySelector('.tile-cam');
+        if (!cam || !cam._phase) return;
+        const ph = cam._phase;
+        const localT = elapsed + ph.phaseOff;
+        const cycle  = ph.lensCycle || 9000; 
+        const t01    = (localT % cycle) / cycle; 
+        const tAbs   = localT;
+
+        el.style.transition = 'none';
+        el.style.opacity    = '1';
+
+        switch (ph.animType) {
+          case 0: { // 左→右→左（sin 來回）
+            const ox = 50 + Math.sin(t01 * Math.PI * 2) * 38;
+            el.style.transformOrigin = `${ox}% 50%`;
+            el.style.transform = 'scale(1.85)';
+            break;
+          }
+          case 1: { // 上→下→上
+            const oy = 50 + Math.sin(t01 * Math.PI * 2) * 38;
+            el.style.transformOrigin = `50% ${oy}%`;
+            el.style.transform = 'scale(1.85)';
+            break;
+          }
+          case 2: { // 手持晃動（幅度縮小 50%, 頻率降低 70%）
+            const fx = 50
+              + Math.sin(tAbs*0.00033+ph.x)*7.5
+              + Math.sin(tAbs*0.00087+ph.y)* 3
+              + Math.sin(tAbs*0.00219+ph.x*.7)*1.25;
+            const fy = 50
+              + Math.cos(tAbs*0.00024+ph.y)*6
+              + Math.cos(tAbs*0.00075+ph.x)* 2.5
+              + Math.cos(tAbs*0.00183+ph.y*.8)*1;
+            const sx = Math.sin(tAbs*0.0054+ph.x)*0.42+Math.sin(tAbs*0.0093+ph.y)*0.16;
+            const sy = Math.cos(tAbs*0.0042+ph.y)*0.35+Math.cos(tAbs*0.0078+ph.x)*0.13;
+            el.style.transformOrigin = `${Math.max(10,Math.min(90,fx))}% ${Math.max(10,Math.min(90,fy))}%`;
+            el.style.transform = `scale(1.85) translate(${sx}px,${sy}px)`;
+            break;
+          }
+          case 3: { // 放大縮小脈衝（1.05→1.9→1.05）
+            const sc = 1.05 + (Math.sin(t01 * Math.PI * 2) + 1) * 0.425;
+            el.style.transformOrigin = `50% 50%`;
+            el.style.transform = `scale(${sc})`;
+            break;
+          }
+          case 4: { // 左上→右下→左上 對角
+            const d  = (Math.sin(t01 * Math.PI * 2) + 1) * 0.5;
+            el.style.transformOrigin = `${15+d*70}% ${15+d*70}%`;
+            el.style.transform = 'scale(1.85)';
+            break;
+          }
+          case 5: { // 圓周運動 (Orbit) - 新增 1
+            const r  = 25;
+            const ox = 50 + Math.sin(t01 * Math.PI * 2) * r;
+            const oy = 50 + Math.cos(t01 * Math.PI * 2) * r;
+            el.style.transformOrigin = `${ox}% ${oy}%`;
+            el.style.transform = 'scale(1.85)';
+            break;
+          }
+          case 6: { // 彈性脈衝 (Elastic Pulse) - 新增 2
+            const bounce = Math.abs(Math.sin(t01 * Math.PI * 4)) * 0.4;
+            const sc = 1.2 + bounce;
+            el.style.transformOrigin = '50% 50%';
+            el.style.transform = `scale(${sc})`;
+            break;
+          }
+        }
+      });
+
+      lensRaf = requestAnimationFrame(lensAnim);
+    }
+
+    function startLens() {
+      lensT0  = null;
+      lensRaf = requestAnimationFrame(lensAnim);
+    }
+
+    function stopLens() {
+      if (lensRaf) { cancelAnimationFrame(lensRaf); lensRaf = null; }
+      document.querySelectorAll('#mosaic .tile-inner').forEach(el => {
+        el.style.transform = ''; el.style.transformOrigin = 'center'; el.style.opacity = '1';
+        el.style.filter = '';
+      });
+    }
+
+    // ── LIQUID ANIMATION ──
+    let liquidT = 0;
+    function animateLiquid() {
+      if (currentMode !== 'liquid') return;
+      liquidT += 0.005;
+      const turb = document.querySelector('#liquid-filter feTurbulence');
+      if (turb) {
+        const freqX = 0.01 + Math.sin(liquidT) * 0.005;
+        const freqY = 0.01 + Math.cos(liquidT) * 0.005;
+        turb.setAttribute('baseFrequency', `${freqX} ${freqY}`);
+      }
+      requestAnimationFrame(animateLiquid);
+    }
+
+    // ── Fade Toggle ──
+    const fadeToggle = document.getElementById('fadeToggle');
+    fadeToggle.addEventListener('click', () => {
+      fadeEnabled = !fadeEnabled;
+      const mosaic = document.getElementById('mosaic');
+      if (fadeEnabled) {
+        mosaic.classList.add('fade-active');
+        fadeToggle.classList.add('on');
+        fadeToggle.textContent = 'FADE: ON';
+      } else {
+        mosaic.classList.remove('fade-active');
+        fadeToggle.classList.remove('on');
+        fadeToggle.textContent = 'FADE: OFF';
+      }
+      // Re-trigger layout to apply animation to all current tiles
+      buildGrid(loadedUrls);
+    });
+
+    // ── Mode switch ──
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const prev = currentMode;
+        currentMode = btn.dataset.m;
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const mosaic = document.getElementById('mosaic');
+        mosaic.className = `mosaic mode-${currentMode}`;
+        document.getElementById('modeDesc').textContent = MODE_CONFIG[currentMode].desc;
+        document.getElementById('hint').textContent     = MODE_CONFIG[currentMode].hint;
+        if (prev === 'lens') stopLens();
+        mosaic.querySelectorAll('.tile-cam,.tile').forEach(el => {
+          el.style.transform = ''; el.style.zIndex = ''; el.style.transition = '';
+        });
+        if (currentMode === 'lens') startLens();
+        if (currentMode === 'liquid') animateLiquid();
+      });
+    });
+
+    // ── Lightbox ──
+    function openLb(url, gradient) {
+      const wrap = document.getElementById('lbWrap');
+      wrap.innerHTML = '';
+      if (url) { const img = document.createElement('img'); img.src = url; wrap.appendChild(img); }
+      else { const s = document.createElement('div'); s.className='lb-swatch'; s.style.background=gradient; wrap.appendChild(s); }
+      document.getElementById('lb').classList.add('open');
+    }
+    function closeLb() { document.getElementById('lb').classList.remove('open'); }
+    document.getElementById('lbBg').addEventListener('click', closeLb);
+    document.getElementById('lbClose').addEventListener('click', closeLb);
+    document.addEventListener('keydown', e => { if (e.key==='Escape') closeLb(); });
+
+    // ── Folder load ──
+    const loadBtn = document.getElementById('loadBtn');
+    const folderInput = document.getElementById('folderInput');
+    loadBtn.addEventListener('click', () => folderInput.click());
+    folderInput.addEventListener('change', () => {
+      const files = Array.from(folderInput.files)
+        .filter(f => /\.(jpe?g|png|webp|gif|avif|webp)$/i.test(f.name))
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric:true }));
+      if (!files.length) { alert('資料夾內沒有圖片'); return; }
+      loadedUrls.forEach(u => URL.revokeObjectURL(u));
+      loadedUrls = files.map(f => URL.createObjectURL(f));
+      buildGrid(loadedUrls);
+      loadBtn.textContent = `↑ 已載入 ${files.length} 張`;
+    });
+
+    // ── Keyboard shortcut: 'O' or 'Enter' to open folder ──
+    document.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.key.toLowerCase() === 'o' || e.key === 'Enter') {
+        folderInput.click();
+      }
+    });
+
+    // ── Init ──
+    buildGrid();
+    startLayoutRotation();
+  </script>
+</body>
+</html>
